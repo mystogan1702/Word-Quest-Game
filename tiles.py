@@ -36,8 +36,6 @@ class Tiles:
 
         for letter in jumlbed_word:
             player_hand.append(letter)
-        print(player_hand)
-
 
 
 Tiles().tiles()
