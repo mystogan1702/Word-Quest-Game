@@ -1,16 +1,15 @@
-import pygame, sys, time
+import pygame, sys, time, os
 
 GAME_TITLE = "Word Quest"
 windowSize = 1280, 720
 window_width = 1280
 window_height = 720
-tile_size = 64
+tile_size = 80
 fps = 60
 animation_speed = 8
-moving_left = False
-moving_right = False
 muted = False
 action = "idling"
+gravity = 0.75
 
 word_values = {
     'a': 1,
@@ -40,3 +39,15 @@ word_values = {
     'y': 4,
     'z': 10
 }
+
+world_data = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+]

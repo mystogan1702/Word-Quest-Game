@@ -14,7 +14,7 @@ class Tiles:
         word_box = []
 
         count = 0
-        jumlbed_word = ""
+        jumbled_word = ""
         possible_word = ""
 
         file = open('assets/word list.txt', 'r', encoding='utf-8')
@@ -25,26 +25,24 @@ class Tiles:
             if len(possible_word) < 5:
                 for x in range(4):
                     random_letter = ''.join(random.choices(string.ascii_lowercase))
-                    randomLetter = random_letter.strip("[]''")
-                    possible_word = randomLetter + possible_word
+                    randomletter = random_letter.strip("[]''")
+                    possible_word = randomletter + possible_word
                     count = 1
 
         while possible_word:
             position = random.randrange(len(possible_word))
-            jumlbed_word += possible_word[position]
+            jumbled_word += possible_word[position]
             possible_word = possible_word[:position] + possible_word[(position + 1):]
 
-        for letter in jumlbed_word:
+            shuffled_list = sorted(jumbled_word, key=lambda ran: random.random())
+
+        for letter in jumbled_word:
             player_hand.append(letter)
+
+        for shuffle in shuffled_list:
+            word_box.append(shuffle)
+        print(player_hand)
+        print(word_box)
 
 
 Tiles().tiles()
-
-
-
-
-
-
-
-
-

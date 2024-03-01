@@ -1,9 +1,10 @@
+import time
+
 import pygame.transform
 
 import button
 
 from pygame.image import load
-
 from settings import *
 from level import Level
 from player import Player
@@ -21,35 +22,34 @@ class Game:
         self.click_paused = 0
         self.movement = [False, False]
         self.game_status = "adventure"
-        self.player = Player('boy', 50, 500, 0.15, 3)
-        self.moving_left = moving_left
-        self.moving_right = moving_right
+        self.player = Player('player','boy', 50, 500, 0.15, 6)
 
-        surf = load('assets/others/Cursor.png').convert_alpha()
+        surf = load('assets/bg and cursor/Cursor.png').convert_alpha()
         width = surf.get_width()
         height = surf.get_height()
         cursor_img = pygame.transform.scale(surf, (int(width * 0.5), int(height * 0.5)))
         cursor = pygame.cursors.Cursor((0, 0), cursor_img)
         pygame.mouse.set_cursor(cursor)
 
-        self.play_img = pygame.image.load('assets/buttons/play.png').convert_alpha()
-        self.quit_img = pygame.image.load('assets/buttons/Quit.png').convert_alpha()
-        self.settings_img = pygame.image.load('assets/buttons/Settings.png').convert_alpha()
-        self.back_img = pygame.image.load('assets/buttons/Back.png').convert_alpha()
-        self.audio_img = pygame.image.load('assets/buttons/Audio.png').convert_alpha()
-        self.main_menu_img = pygame.image.load('assets/buttons/MainMenu.png').convert_alpha()
-        self.title_img = pygame.image.load('assets/buttons/Title.png').convert_alpha()
-        self.resume_img = pygame.image.load('assets/buttons/Resume.png').convert_alpha()
-        self.pause_img = pygame.image.load('assets/buttons/Pause.png').convert_alpha()
-        self.exit_img = pygame.image.load('assets/buttons/Exit.png').convert_alpha()
+        self.play_img = load('assets/buttons/play.png').convert_alpha()
+        self.quit_img = load('assets/buttons/Quit.png').convert_alpha()
+        self.settings_img = load('assets/buttons/Settings.png').convert_alpha()
+        self.back_img = load('assets/buttons/Back.png').convert_alpha()
+        self.audio_img = load('assets/buttons/Audio.png').convert_alpha()
+        self.main_menu_img = load('assets/buttons/MainMenu.png').convert_alpha()
+        self.title_img = load('assets/buttons/Title.png').convert_alpha()
+        self.resume_img = load('assets/buttons/Resume.png').convert_alpha()
+        self.pause_img = load('assets/buttons/Pause.png').convert_alpha()
+        self.exit_img = load('assets/buttons/Exit.png').convert_alpha()
+        self.bg_img = load('assets/bg and cursor/Background.jpg').convert_alpha()
+        self.bg_playing_img = load('assets/bg and cursor/Background_Playing.jpg').convert_alpha()
+        self.bg_paused_img = load('assets/bg and cursor/Background_Pause.jpg').convert_alpha()
+        self.battle_field_imd = load('assets/bg and cursor/Battle_Field.png').convert_alpha()
+        self.audio_off_img = load('assets/buttons/button_slider_animation/button_17.png').convert_alpha()
+        self.audio_on_img = load('assets/buttons/button_slider_animation/button_1.png').convert_alpha()
 
-        self.bg_img = pygame.image.load('assets/others/Background.jpg').convert_alpha()
-        self.bg_playing_img = pygame.image.load('assets/others/Background_Playing.jpg').convert_alpha()
-        self.bg_paused_img = pygame.image.load('assets/others/Background_Pause.jpg').convert_alpha()
-        self.battle_field_imd = pygame.image.load('assets/others/Battle_Field.png').convert_alpha()
-
-        self.audio_off_img = pygame.image.load('assets/buttons/button_slider_animation/button_17.png')
-        self.audio_on_img = pygame.image.load('assets/buttons/button_slider_animation/button_1.png')
+        self.jumping_sound = pygame.mixer.Sound('assets/sounds/player/boy/jump/jumping.wav')
+        self.walking = pygame.mixer.Sound('assets/sounds/player/boy/walk/sfx_step_grass_l.flac')
 
         self.play_button = button.Button(((self.screen.get_width() / 2) - (self.play_img.get_width() / 2) * 3), 290, self.play_img, 3.0)
         self.settings_button = button.Button(((self.screen.get_width() / 2) - (self.settings_img.get_width() / 2) * 3), 390, self.settings_img, 3.0)
@@ -71,23 +71,30 @@ class Game:
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    self.moving_left = True
+                    self.player.moving_left = True
                 if event.key == pygame.K_RIGHT:
-                    self.moving_right = True
+                    self.player.moving_right = True
                 if event.key == pygame.K_a:
-                    self.moving_left = True
+                    self.player.moving_left = True
                 if event.key == pygame.K_d:
-                    self.moving_right = True
+                    self.player.moving_right = True
+                if not self.player.jump and not self.player.in_air:
+                    if event.key == pygame.K_SPACE and self.player.alive:
+                        self.player.jump = True
+                        self.player.in_air = True
+                        self.player.play_sound += 1
+                        if not self.muted and self.player.jump:
+                            if self.player.play_sound == 1:
+                                self.jumping_sound.play()
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
-                    self.moving_left = False
+                    self.player.moving_left = False
                 if event.key == pygame.K_RIGHT:
-                    self.moving_right = False
+                    self.player.moving_right = False
                 if event.key == pygame.K_a:
-                    self.moving_left = False
+                    self.player.moving_left = False
                 if event.key == pygame.K_d:
-                    self.moving_right = False
-
+                    self.player.moving_right = False
     def run(self):
         keys = pygame.key.get_pressed()
 
@@ -170,9 +177,8 @@ class Game:
 
             else:
                 self.screen.blit(self.bg_playing_img, (0, 0))
-                self.player.update_animation()
-                self.player.draw()
-                self.player.move(self.moving_left, self.moving_right)
+                #self.screen.blit(self.platform_img, (0, 0))
+                self.player.run()
 
             if self.pause_button.draw():
                 self.game_paused = True
