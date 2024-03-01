@@ -10,9 +10,12 @@ class Button:
         self.rect.topleft = (x, y)
         self.click = False
         self.surface = pygame.display.get_surface()
+        self.animation_list = []
 
     def status(self):
         self.surface.blit(self.image, (self.rect.x, self.rect.y))
+
+
 
     def draw(self):
         action = False

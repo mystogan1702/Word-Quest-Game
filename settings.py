@@ -7,6 +7,10 @@ window_height = 720
 tile_size = 64
 fps = 60
 animation_speed = 8
+moving_left = False
+moving_right = False
+muted = False
+action = "idling"
 
 word_values = {
     'a': 1,
