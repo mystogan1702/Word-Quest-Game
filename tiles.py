@@ -9,6 +9,8 @@ class Tiles:
         self.tiles_placement_x = 0
         self.tiles_placement_y = 0
 
+        self.tile = ''
+
     def tiles(self):
         player_hand = []
         word_box = []
@@ -38,6 +40,9 @@ class Tiles:
 
         for letter in jumbled_word:
             player_hand.append(letter)
+
+        for tile in player_hand:
+            self.tile = tile
 
         for shuffle in shuffled_list:
             word_box.append(shuffle)

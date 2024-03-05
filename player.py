@@ -1,6 +1,6 @@
 from settings import *
 from world import World
-from Health import HealthBar
+
 
 class Player(pygame.sprite.Sprite):
 
@@ -25,7 +25,6 @@ class Player(pygame.sprite.Sprite):
         self.update_time = pygame.time.get_ticks()
         self.world = World(world_data)
         self.game_over = 0
-        self.screen_scroll = 0
         animation_types = ["idle", "walking", "jumping"]
         for animation in animation_types:
             temp_list = []
@@ -37,12 +36,12 @@ class Player(pygame.sprite.Sprite):
                 temp_list.append(img)
             self.animation_list.append(temp_list)
 
-        self.image = self.animation_list[self.action][self.frame_index]
-        self.rect = self.image.get_rect()
+        self.player = self.animation_list[self.action][self.frame_index]
+        self.rect = self.player.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
+        self.width = self.player.get_width()
+        self.height = self.player.get_height()
         self.surface = pygame.display.get_surface()
         self.surface_width = self.surface.get_width()
         self.surface_height = self.surface.get_height()
@@ -103,7 +102,7 @@ class Player(pygame.sprite.Sprite):
         #        self.rect.x -= dx
         #        self.screen_scroll = -dx
 
-        return self.screen_scroll
+        #return self.screen_scroll
 
     def update_animation(self):
         animation_cd = 100

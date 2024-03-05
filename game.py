@@ -1,5 +1,3 @@
-import time
-
 import pygame.transform
 import button
 
@@ -29,12 +27,11 @@ class Game:
         self.world = World(world_data)
         self.player = Player('player', self.gender, 250, 520, 0.15, 3)
         self.health = HealthBar(5, 5, self.player.health, self.player.max_health)
-        self.screen_scroll = 0
 
         surf = load('assets/bg and cursor/Cursor.png').convert_alpha()
         width = surf.get_width()
         height = surf.get_height()
-        cursor_img = pygame.transform.scale(surf, (int(width * 0.5), int(height * 0.5)))
+        cursor_img = pygame.transform.scale(surf, (int(width * 0.4), int(height * 0.4)))
         cursor = pygame.cursors.Cursor((0, 0), cursor_img)
         pygame.mouse.set_cursor(cursor)
 
@@ -49,14 +46,18 @@ class Game:
         self.pause_img = load('assets/buttons/Pause.png').convert_alpha()
         self.exit_img = load('assets/buttons/Exit.png').convert_alpha()
         self.bg_img = load('assets/bg and cursor/Background.png').convert_alpha()
-        self.bg_playing_img = load('assets/bg and cursor/Background_Playing.jpg').convert_alpha()
+        self.bg_playing_level_1_img = load('assets/bg and cursor/Background_Playing_level_1.jpg').convert_alpha()
+        self.bg_playing_level_2_img = load('assets/bg and cursor/Background_Playing_level_2.png').convert_alpha()
         self.bg_paused_img = load('assets/bg and cursor/Background_Pause.jpg').convert_alpha()
         self.battle_field_imd = load('assets/bg and cursor/Battle_Field.png').convert_alpha()
         self.audio_off_img = load('assets/buttons/button_slider_animation/button_17.png').convert_alpha()
         self.audio_on_img = load('assets/buttons/button_slider_animation/button_1.png').convert_alpha()
         self.male_img = load('assets/buttons/boy.png').convert_alpha()
         self.female_img = load('assets/buttons/girl.png').convert_alpha()
+        self.logo_img = load('assets/others/word_quest_logo.png').convert_alpha()
 
+        pygame_icon = self.logo_img
+        pygame.display.set_icon(pygame_icon)
 
         self.jumping_sound = pygame.mixer.Sound('assets/sounds/player/boy/jump/jumping.wav')
         self.walking = pygame.mixer.Sound('assets/sounds/player/boy/walk/sfx_step_grass_l.flac')
@@ -202,7 +203,10 @@ class Game:
                     self.screen.blit(self.battle_field_imd, (0, 0))
 
                 else:
-                    self.screen.blit(self.bg_playing_img, (0, 0))
+                    if level == 1:
+                        self.screen.blit(self.bg_playing_level_1_img, (0, 0))
+                    elif level == 2:
+                        self.screen.blit(self.bg_playing_level_2_img, (0, 0))
                     self.health.draw(self.player.health)
                     self.world.draw()
                     self.player.run()
