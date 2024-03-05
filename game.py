@@ -25,8 +25,9 @@ class Game:
         self.movement = [False, False]
         self.gender = 'boy'
         self.game_status = "adventure"
+        self.has_gender = False
         self.world = World(world_data)
-        self.player = Player('player', 'boy', 250, 520, 0.15, 3)
+        self.player = Player('player', self.gender, 250, 520, 0.15, 3)
         self.health = HealthBar(5, 5, self.player.health, self.player.max_health)
         self.screen_scroll = 0
 
@@ -47,8 +48,8 @@ class Game:
         self.resume_img = load('assets/buttons/Resume.png').convert_alpha()
         self.pause_img = load('assets/buttons/Pause.png').convert_alpha()
         self.exit_img = load('assets/buttons/Exit.png').convert_alpha()
-        self.bg_img = load('assets/bg and cursor/Background.jpg').convert_alpha()
-        self.bg_playing_img = load('assets/bg and cursor/Background_Playing.png').convert_alpha()
+        self.bg_img = load('assets/bg and cursor/Background.png').convert_alpha()
+        self.bg_playing_img = load('assets/bg and cursor/Background_Playing.jpg').convert_alpha()
         self.bg_paused_img = load('assets/bg and cursor/Background_Pause.jpg').convert_alpha()
         self.battle_field_imd = load('assets/bg and cursor/Battle_Field.png').convert_alpha()
         self.audio_off_img = load('assets/buttons/button_slider_animation/button_17.png').convert_alpha()
@@ -67,7 +68,7 @@ class Game:
         self.audio_button = button.Button(((self.screen.get_width() / 2) - (self.audio_img.get_width() / 2) * 3), 110, self.audio_img, 3.0)
         self.audio_on_button = button.Button(((self.screen.get_width() / 2) - (self.audio_on_img.get_width() / 2) * 3), 210, self.audio_on_img, 3.0)
         self.audio_off_button = button.Button(((self.screen.get_width() / 2) - (self.audio_off_img.get_width() / 2) * 3), 210, self.audio_off_img, 3.0)
-        self.back_button = button.Button(((self.screen.get_width() / 2) - (self.back_img.get_width() / 2) * 3), 470, self.back_img, 0.8)
+        self.back_button = button.Button(((self.screen.get_width() / 2) - (self.back_img.get_width() / 2) * 3), 470, self.back_img, 3)
         self.main_menu_button = button.Button(((self.screen.get_width() / 2) - (self.main_menu_img.get_width() / 2) * 3.5), 20, self.main_menu_img, 3.5)
         self.title_button = button.Button(((self.screen.get_width() / 2) - (self.title_img.get_width() / 2) * 3.5), 20, self.title_img, 3.5)
         self.resume_button = button.Button(((self.screen.get_width() / 2) - (self.resume_img.get_width() / 2) * 3), 290, self.resume_img, 3.0)
@@ -144,6 +145,7 @@ class Game:
 
                 if self.quit_button.draw():
                     self.playing = False
+                    self.has_gender = False
                     self.game_paused = True
                     self.menu_state = 'main'
 
@@ -187,36 +189,45 @@ class Game:
 
         if not self.game_paused and self.playing:
 
-            if self.game_status == "battle":
-                self.screen.blit(self.battle_field_imd, (0, 0))
+            if self.male_button.draw():
+                self.gender = 'boy'
+                self.has_gender = True
+                self.player = Player('player', self.gender, 250, 520, 0.15, 3)
+            if self.female_button.draw():
+                self.gender = 'girl'
+                self.has_gender = True
+                self.player = Player('player', self.gender, 250, 520, 0.15, 3)
+            if self.has_gender:
+                if self.game_status == "battle":
+                    self.screen.blit(self.battle_field_imd, (0, 0))
 
-            else:
-                self.screen.blit(self.bg_playing_img, (0, 0))
-                self.health.draw(self.player.health)
-                self.world.draw()
-                self.player.run()
+                else:
+                    self.screen.blit(self.bg_playing_img, (0, 0))
+                    self.health.draw(self.player.health)
+                    self.world.draw()
+                    self.player.run()
 
-            if self.pause_button.draw():
-                self.game_paused = True
+                if self.pause_button.draw():
+                    self.game_paused = True
 
-            if keys[pygame.K_ESCAPE]:
-                self.game_paused = True
-                time.sleep(0.2)
+                if keys[pygame.K_ESCAPE]:
+                    self.game_paused = True
+                    time.sleep(0.2)
 
-        if self.player.alive:
-            if self.player.in_air:
-                self.player.update_action(2)
-            elif self.player.moving_left or self.player.moving_right:
-                self.player.update_action(1)
-            else:
-                self.player.update_action(0)
-            self.world.screen_scroll = self.player.move(self.player.moving_left, self.player.moving_right)
-        if self.player.game_over == 1:
-            self.player = Player('player', 'boy', 250, 520, 0.15, 3)
-            self.world.screen_scroll = 0
-            self.player.screen_scroll = 0
+            if self.player.alive:
+                if self.player.in_air:
+                    self.player.update_action(2)
+                elif self.player.moving_left or self.player.moving_right:
+                    self.player.update_action(1)
+                else:
+                    self.player.update_action(0)
+                self.world.screen_scroll = self.player.move(self.player.moving_left, self.player.moving_right)
+            if self.player.game_over == 1:
+                self.player = Player('player', self.gender, 250, 520, 0.15, 3)
+                self.world.screen_scroll = 0
+                self.player.screen_scroll = 0
 
-        if self.player.rect.top >= self.screen.get_height():
-            self.player.game_over = 1
+            if self.player.rect.top >= self.screen.get_height():
+                self.player.game_over = 1
 
         self.event_loop()

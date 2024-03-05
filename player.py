@@ -98,7 +98,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
 
-       # if self.char_type == 'player':
+        #if self.char_type == 'player':
         #    if self.rect.right > self.surface_width - scroll_thresh or self.rect.left < scroll_thresh:
         #        self.rect.x -= dx
         #        self.screen_scroll = -dx
