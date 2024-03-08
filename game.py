@@ -16,18 +16,16 @@ SCREEN_HEIGHT = 720
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Word Quest')
 
-# set framerate
 clock = pygame.time.Clock()
 FPS = 60
 
-# define game variables
 GRAVITY = 0.75
 SCROLL_THRESH = 200
 ROWS = 16
 COLS = 150
 TILE_SIZE = SCREEN_HEIGHT // ROWS
 TILE_TYPES = 18
-MAX_LEVELS = 2
+MAX_LEVELS = 3
 screen_scroll = 0
 bg_scroll = 0
 level = 1
@@ -44,29 +42,26 @@ game_status = "adventure"
 gender = 'boy'
 jump_sound = 0
 current_seconds = 3
+time_remaining = 300
 game_complete = False
 pygame.time.set_timer(pygame.USEREVENT, 1000)
 
-# define player action variables
 moving_left = False
 moving_right = False
 
-# load music and sounds
 pygame.mixer.music.load('assets/audio/music2.mp3')
 pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.play(-1, 0.0, 5000)
 jump_fx = pygame.mixer.Sound('assets/audio/jump.wav')
 jump_fx.set_volume(0.05)
 
-
-# load images
 surf = pygame.image.load('assets/img/cursor/Cursor.png').convert_alpha()
 width = surf.get_width()
 height = surf.get_height()
 cursor_img = pygame.transform.scale(surf, (int(width * 0.5), int(height * 0.5)))
 cursor = pygame.cursors.Cursor((0, 0), cursor_img)
 pygame.mouse.set_cursor(cursor)
-# button images
+
 play_img = pygame.image.load('assets/img/buttons/play.png').convert_alpha()
 quit_img = pygame.image.load('assets/img/buttons/Quit.png').convert_alpha()
 settings_img = pygame.image.load('assets/img/buttons/Settings.png').convert_alpha()
@@ -86,15 +81,12 @@ audio_on_img = pygame.image.load('assets/img/buttons/button_slider_animation/but
 male_img = pygame.image.load('assets/img/buttons/boy.png').convert_alpha()
 female_img = pygame.image.load('assets/img/buttons/girl.png').convert_alpha()
 
-# store tiles in a list
 img_list = []
 for x in range(TILE_TYPES):
     img = pygame.image.load(f'assets/img/Tile/{x}.png')
     img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
     img_list.append(img)
 
-
-# define colours
 BG = (144, 201, 120)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
@@ -102,7 +94,6 @@ GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 PINK = (235, 65, 54)
 
-# define font
 font = pygame.font.SysFont('Futura', 30)
 
 
@@ -111,17 +102,6 @@ def draw_text(text, font, text_col, x, y):
     screen.blit(img, (x, y))
 
 
-def draw_bg():
-    screen.fill(BG)
-    width = sky_img.get_width()
-    for x in range(5):
-        screen.blit(sky_img, ((x * width) - bg_scroll * 0.5, 0))
-        screen.blit(mountain_img, ((x * width) - bg_scroll * 0.6, SCREEN_HEIGHT - mountain_img.get_height() - 300))
-        screen.blit(pine1_img, ((x * width) - bg_scroll * 0.7, SCREEN_HEIGHT - pine1_img.get_height() - 150))
-        screen.blit(pine2_img, ((x * width) - bg_scroll * 0.8, SCREEN_HEIGHT - pine2_img.get_height()))
-
-
-# function to reset level
 def reset_level():
     enemy_group.empty()
     decoration_group.empty()
@@ -155,7 +135,6 @@ class Player(pygame.sprite.Sprite):
         self.frame_index = 0
         self.action = 0
         self.update_time = pygame.time.get_ticks()
-        # ai specific variables
         self.move_counter = 0
         self.vision = pygame.Rect(0, 0, 150, 20)
         self.idling = False
@@ -165,13 +144,10 @@ class Player(pygame.sprite.Sprite):
         self.counter = current_seconds
         self.can_move = True
 
-        # load all images for the players
         if char_type == 'player':
             animation_types = ['idle', 'walking', 'jumping']
             for animation in animation_types:
-                # reset temporary list of images
                 temp_list = []
-                # count number of files in the folder
                 num_of_frames = len(os.listdir(f'assets/img/{self.char_type}/{gender}/{animation}'))
                 for i in range(num_of_frames):
                     img = pygame.image.load(f'assets/img/{self.char_type}/{gender}/{animation}/{i}.png').convert_alpha()
@@ -181,9 +157,7 @@ class Player(pygame.sprite.Sprite):
         if char_type == 'enemy':
             animation_types = ['walking', 'walking', 'walking']
             for animation in animation_types:
-                # reset temporary list of images
                 temp_list = []
-                # count number of files in the folder
                 num_of_frames = len(os.listdir(f'assets/img/{self.char_type}/{gender}/{animation}'))
                 for i in range(num_of_frames):
                     img = pygame.image.load(f'assets/img/{self.char_type}/{gender}/{animation}/{i}.png').convert_alpha()
@@ -197,19 +171,15 @@ class Player(pygame.sprite.Sprite):
         self.width = self.image.get_width()
         self.height = self.image.get_height()
 
-
     def update(self):
         self.update_animation()
         self.check_alive()
 
-
     def move(self, moving_left, moving_right):
-        # reset movement variables
         screen_scroll = 0
         dx = 0
         dy = 0
 
-        # assign movement variables if moving left or right
         if self.can_move:
             if moving_left:
                 dx = -self.speed
@@ -220,34 +190,26 @@ class Player(pygame.sprite.Sprite):
                 self.flip = False
                 self.direction = 1
 
-            # jump
             if self.jump and not self.in_air:
                 self.vel_y = -13
                 self.jump = False
                 self.in_air = True
 
-        # apply gravity
         self.vel_y += GRAVITY
         if self.vel_y > 10:
             self.vel_y
         dy += self.vel_y
 
-        # check for collision
         for tile in world.obstacle_list:
-            # check collision in the x direction
             if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
                 dx = 0
-                # if the ai has hit a wall then make it turn around
                 if self.char_type == 'enemy':
                     self.direction *= -1
                     self.move_counter = 0
-            # check for collision in the y direction
             if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
-                # check if below the ground, i.e. jumping
                 if self.vel_y < 0:
                     self.vel_y = 0
                     dy = tile[1].bottom - self.rect.top
-                # check if above the ground, i.e. falling
                 elif self.vel_y >= 0:
                     self.vel_y = 0
                     self.in_air = False
@@ -280,31 +242,23 @@ class Player(pygame.sprite.Sprite):
                         self.flip = False
                         self.direction = -1
 
-
-        # check for collision with water
         if pygame.sprite.spritecollide(self, water_group, False):
             self.health = 0
 
-        # check for collision with exit
         level_complete = False
         if pygame.sprite.spritecollide(self, exit_group, False):
             level_complete = True
 
-        # check if fallen off the map
         if self.rect.bottom > SCREEN_HEIGHT:
             self.health = 0
 
-
-        # check if going off the edges of the screen
         if self.char_type == 'player':
             if self.rect.left + dx < 0 or self.rect.right + dx > SCREEN_WIDTH:
                 dx = 0
 
-        # update rectangle position
         self.rect.x += dx
         self.rect.y += dy
 
-        # update scroll based on player position
         if self.char_type == 'player':
             if (self.rect.right > SCREEN_WIDTH - SCROLL_THRESH and bg_scroll <
                     (world.level_length * TILE_SIZE) - SCREEN_WIDTH) \
@@ -317,10 +271,9 @@ class Player(pygame.sprite.Sprite):
     def ai(self):
         if self.alive and player.alive:
             if self.idling == False and random.randint(1, 200) == 1:
-                self.update_action(0)  # 0: idle
+                self.update_action(0)
                 self.idling = True
                 self.idling_counter = 50
-            # check if the ai in near the player
             else:
                 if self.idling == False:
                     if self.direction == 1:
@@ -329,9 +282,8 @@ class Player(pygame.sprite.Sprite):
                         ai_moving_right = False
                     ai_moving_left = not ai_moving_right
                     self.move(ai_moving_left, ai_moving_right)
-                    self.update_action(0)  # 1: run
+                    self.update_action(0)
                     self.move_counter += 1
-                    # update ai vision as the enemy moves
                     self.vision.center = (self.rect.centerx + 75 * self.direction, self.rect.centery)
 
                     if self.move_counter > TILE_SIZE:
@@ -346,23 +298,17 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += screen_scroll
 
     def update_animation(self):
-        # update animation
         ANIMATION_COOLDOWN = 100
-        # update image depending on current frame
         self.image = self.animation_list[self.action][self.frame_index]
-        # check if enough time has passed since the last update
         if pygame.time.get_ticks() - self.update_time > ANIMATION_COOLDOWN:
             self.update_time = pygame.time.get_ticks()
             self.frame_index += 1
-        # if the animation has run out the reset back to the start
         if self.frame_index >= len(self.animation_list[self.action]):
             self.frame_index = 0
 
     def update_action(self, new_action):
-        # check if the new action is different to the previous one
         if new_action != self.action:
             self.action = new_action
-            # update the animation settings
             self.frame_index = 0
             self.update_time = pygame.time.get_ticks()
 
@@ -383,7 +329,6 @@ class World():
 
     def process_data(self, data):
         self.level_length = len(data[0])
-        # iterate through each value in level data file
         for y, row in enumerate(data):
             for x, tile in enumerate(row):
                 if tile >= 0:
@@ -400,16 +345,16 @@ class World():
                     elif tile >= 5 and tile <= 11:
                         decoration_1 = Decoration(img, x * TILE_SIZE, y * TILE_SIZE)
                         decoration_group.add(decoration_1)
-                    elif tile == 12:  # create player
-                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.15, 5)
+                    elif tile == 12:
+                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
                         health_bar = HealthBar(10, 10, player.health, player.health)
-                    elif tile == 13:  # create enemies
-                        enemy_1 = Player('enemy', 'mosquito', x * TILE_SIZE, y * TILE_SIZE, 0.1, 3)
+                    elif tile == 13:
+                        enemy_1 = Player('enemy', 'mosquito', x * TILE_SIZE, y * TILE_SIZE, 0.09, 2)
                         enemy_group.add(enemy_1)
-                    elif tile == 14:  # create enemies
-                        enemy_2 = Player('enemy', 'bee', x * TILE_SIZE, y * TILE_SIZE, 0.08, 3)
+                    elif tile == 14:
+                        enemy_2 = Player('enemy', 'bee', x * TILE_SIZE, y * TILE_SIZE, 0.07, 2)
                         enemy_group.add(enemy_2)
-                    elif tile == 15:  # create exit
+                    elif tile == 15:
                         exit = Exit(img, x * TILE_SIZE, y * TILE_SIZE)
                         exit_group.add(exit)
                     elif tile >= 16 and tile <= 17:
@@ -464,9 +409,7 @@ class HealthBar():
         self.max_health = max_health
 
     def draw(self, health):
-        # update with new health
         self.health = health
-        # calculate health ratio
         ratio = self.health / self.max_health
         pygame.draw.rect(screen, BLACK, (self.x - 2, self.y - 2, 154, 24))
         pygame.draw.rect(screen, RED, (self.x, self.y, 150, 20))
@@ -483,26 +426,23 @@ class ScreenFade():
     def fade(self):
         fade_complete = False
         self.fade_counter += self.speed
-        if self.direction == 1:  # whole screen fade
+        if self.direction == 1:
             pygame.draw.rect(screen, self.colour, (0 - self.fade_counter, 0, SCREEN_WIDTH // 2, SCREEN_HEIGHT))
             pygame.draw.rect(screen, self.colour,
                              (SCREEN_WIDTH // 2 + self.fade_counter, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
             pygame.draw.rect(screen, self.colour, (0, 0 - self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT // 2))
             pygame.draw.rect(screen, self.colour,
                              (0, SCREEN_HEIGHT // 2 + self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT))
-        if self.direction == 2:  # vertical screen fade down
+        if self.direction == 2:
             pygame.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 0 + self.fade_counter))
         if self.fade_counter >= SCREEN_WIDTH:
             fade_complete = True
 
         return fade_complete
 
-
-# create screen fades
 intro_fade = ScreenFade(1, BLACK, 10)
 death_fade = ScreenFade(2, PINK, 10)
 
-# create buttons
 play_button = button.Button(((screen.get_width() / 2) - (play_img.get_width() / 2) * 3), 290,
                             play_img, 3.0)
 settings_button = button.Button(((screen.get_width() / 2) - (settings_img.get_width() / 2) * 3), 390,
@@ -530,18 +470,15 @@ pause_button = button.Button(1205, 5, pause_img, 1.5)
 male_button = button.Button(100, ((screen.get_height() / 2) - (male_img.get_height() / 2) * 0.8), male_img, 0.8)
 female_button = button.Button(900, ((screen.get_height() / 2) - (male_img.get_height() / 2) * 0.8), female_img, 0.8)
 
-# create sprite groups
 enemy_group = pygame.sprite.Group()
 decoration_group = pygame.sprite.Group()
 water_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
 
-# create empty tile list
 world_data = []
 for row in range(ROWS):
     r = [-1] * COLS
     world_data.append(r)
-# load in level data and create world
 with open(f'assets/level{level}_data.csv', newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',')
     for x, row in enumerate(reader):
@@ -641,11 +578,11 @@ while True:
                 if male_button.draw(screen):
                     gender = 'boy'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
                 if female_button.draw(screen):
                     gender = 'girl'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
             if has_gender:
                 if game_status == "battle":
                     screen.blit(battle_field_imd, (0, 0))
@@ -653,7 +590,6 @@ while True:
                 else:
                     screen.blit(bg_playing_img, (0, 0))
                     world.draw()
-                    # show player health
                     health_bar.draw(player.health)
 
                     player.update()
@@ -664,7 +600,6 @@ while True:
                         enemy.update()
                         enemy.draw()
 
-                    # update and draw groups
                     decoration_group.update()
                     water_group.update()
                     exit_group.update()
@@ -672,31 +607,27 @@ while True:
                     water_group.draw(screen)
                     exit_group.draw(screen)
 
-                    # show intro
                     if start_intro == True:
                         if intro_fade.fade():
                             start_intro = False
                             intro_fade.fade_counter = 0
 
-                    # update player actions
                     if player.alive:
                         if player.in_air:
-                            player.update_action(2)  # 2: jump
+                            player.update_action(2)
                         elif moving_left or moving_right:
-                            player.update_action(1)  # 1: run
+                            player.update_action(1)
                         else:
-                            player.update_action(0)  # 0: idle
+                            player.update_action(0)
                             player.player_idling = True
                         screen_scroll, level_complete = player.move(moving_left, moving_right)
                         bg_scroll -= screen_scroll
-                        # check if player has completed the level
                         if level_complete:
                             start_intro = True
                             level += 1
                             bg_scroll = 0
                             world_data = reset_level()
                             if level <= MAX_LEVELS:
-                                # load in level data and create world
                                 with open(f'assets/level{level}_data.csv', newline='') as csvfile:
                                     reader = csv.reader(csvfile, delimiter=',')
                                     for x, row in enumerate(reader):
@@ -704,8 +635,9 @@ while True:
                                             world_data[x][y] = int(tile)
                                 world = World()
                                 player, health_bar = world.process_data(world_data)
-                            if level == 3:
-                                game_complete = True
+                        if level == 4:
+                            game_complete = True
+
                     else:
                         screen_scroll = 0
                         if death_fade.fade():
@@ -714,7 +646,6 @@ while True:
                                 start_intro = True
                                 bg_scroll = 0
                                 world_data = reset_level()
-                                # load in level data and create world
                                 with open(f'assets/level{level}_data.csv', newline='') as csvfile:
                                     reader = csv.reader(csvfile, delimiter=',')
                                     for x, row in enumerate(reader):
@@ -729,6 +660,10 @@ while True:
                 if keys[pygame.K_ESCAPE]:
                     game_paused = True
                     time.sleep(0.2)
+                if level == 3:
+                    draw_text(f'The Game will Stop in {time_remaining} seconds...', font, BLACK, ((SCREEN_WIDTH / 2) - 100), 20)
+                    if time_remaining == 0:
+                        game_complete = True
         else:
             game_paused = True
             playing = False
@@ -739,6 +674,10 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if level == 3:
+            if event.type == pygame.USEREVENT:
+                time_remaining -= 1
+                print(time_remaining)
         if not player.vulnerable:
             player.update_action(0)
             if event.type == pygame.USEREVENT:
@@ -748,7 +687,6 @@ while True:
             if current_seconds == 0:
                 player.vulnerable = True
                 current_seconds = 3
-        # keyboard presses
         if player.can_move:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
@@ -771,7 +709,6 @@ while True:
                             if jump_sound == 1:
                                 jump_fx.play()
 
-        # keyboard button released
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 moving_left = False
