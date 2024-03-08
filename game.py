@@ -31,6 +31,7 @@ bg_scroll = 0
 level = 1
 start_game = False
 start_intro = False
+game_restart = False
 
 playing = False
 menu_state = 'main'
@@ -346,7 +347,7 @@ class World():
                         decoration_1 = Decoration(img, x * TILE_SIZE, y * TILE_SIZE)
                         decoration_group.add(decoration_1)
                     elif tile == 12:
-                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
+                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
                         health_bar = HealthBar(10, 10, player.health, player.health)
                     elif tile == 13:
                         enemy_1 = Player('enemy', 'mosquito', x * TILE_SIZE, y * TILE_SIZE, 0.09, 2)
@@ -435,13 +436,15 @@ class ScreenFade():
                              (0, SCREEN_HEIGHT // 2 + self.fade_counter, SCREEN_WIDTH, SCREEN_HEIGHT))
         if self.direction == 2:
             pygame.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 0 + self.fade_counter))
+        if self.direction ==3:
+            pygame.draw.rect(screen, self.colour, (0, 0, SCREEN_WIDTH, 1260 + self.fade_counter))
         if self.fade_counter >= SCREEN_WIDTH:
             fade_complete = True
 
         return fade_complete
 
 intro_fade = ScreenFade(1, BLACK, 10)
-death_fade = ScreenFade(2, PINK, 10)
+death_fade = ScreenFade(3, BLACK, 50)
 
 play_button = button.Button(((screen.get_width() / 2) - (play_img.get_width() / 2) * 3), 290,
                             play_img, 3.0)
@@ -524,6 +527,8 @@ while True:
                 menu_state = "settings"
 
             if quit_button.draw(screen):
+                level = 1
+                world_data = reset_level()
                 time.sleep(0.3)
                 game_paused = True
                 menu_state = "main"
@@ -578,11 +583,11 @@ while True:
                 if male_button.draw(screen):
                     gender = 'boy'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
                 if female_button.draw(screen):
                     gender = 'girl'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 4)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
             if has_gender:
                 if game_status == "battle":
                     screen.blit(battle_field_imd, (0, 0))
@@ -635,8 +640,6 @@ while True:
                                             world_data[x][y] = int(tile)
                                 world = World()
                                 player, health_bar = world.process_data(world_data)
-                        if level == 4:
-                            game_complete = True
 
                     else:
                         screen_scroll = 0
@@ -664,6 +667,18 @@ while True:
                     draw_text(f'The Game will Stop in {time_remaining} seconds...', font, BLACK, ((SCREEN_WIDTH / 2) - 100), 20)
                     if time_remaining == 0:
                         game_complete = True
+                if level > 3:
+                    game_complete = True
+
+                if game_complete:
+                    level = 1
+                    world_data = reset_level()
+                    playing = False
+                    game_paused = True
+                    has_gender = False
+                    menu_state = 'main'
+                    game_complete = False
+
         else:
             game_paused = True
             playing = False
