@@ -24,11 +24,11 @@ SCROLL_THRESH = 200
 ROWS = 16
 COLS = 150
 TILE_SIZE = SCREEN_HEIGHT // ROWS
-TILE_TYPES = 18
+TILE_TYPES = 20
 MAX_LEVELS = 3
 screen_scroll = 0
 bg_scroll = 0
-level = 1
+level = 2
 start_game = False
 start_intro = False
 game_restart = False
@@ -74,7 +74,8 @@ resume_img = pygame.image.load('assets/img/buttons/Resume.png').convert_alpha()
 pause_img = pygame.image.load('assets/img/buttons/Pause.png').convert_alpha()
 exit_img = pygame.image.load('assets/img/buttons/Exit.png').convert_alpha()
 bg_img = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
-bg_playing_img = pygame.image.load('assets/img/bg and cursor/Background_Playing.jpg').convert_alpha()
+bg_level_1_img = pygame.image.load('assets/img/bg and cursor/bg_level_1.jpg').convert_alpha()
+bg_level_2_img = pygame.image.load('assets/img/bg and cursor/bg_level_2.png').convert_alpha()
 bg_paused_img = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
 battle_field_imd = pygame.image.load('assets/img/bg and cursor/Battle_Field.png').convert_alpha()
 audio_off_img = pygame.image.load('assets/img/buttons/button_slider_animation/button_17.png').convert_alpha()
@@ -100,7 +101,12 @@ font = pygame.font.SysFont('Futura', 30)
 
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
+
     screen.blit(img, (x, y))
+
+def level_2():
+    screen.fill(BG)
+    screen.blit(bg_level_2_img, (0 - bg_scroll * 0.6, 0))
 
 
 def reset_level():
@@ -125,7 +131,7 @@ class Player(pygame.sprite.Sprite):
         self.char_type = char_type
         self.speed = speed
         self.shoot_cooldown = 0
-        self.health = 100
+        self.health = 20
         self.max_health = self.health
         self.direction = 1
         self.vel_y = 0
@@ -144,9 +150,11 @@ class Player(pygame.sprite.Sprite):
         self.player_idling = False
         self.counter = current_seconds
         self.can_move = True
+        self.running = False
+        self.professor_health = 50
 
         if char_type == 'player':
-            animation_types = ['idle', 'walking', 'jumping']
+            animation_types = ['idle', 'walking', 'jumping', 'running', 'damage', 'dead']
             for animation in animation_types:
                 temp_list = []
                 num_of_frames = len(os.listdir(f'assets/img/{self.char_type}/{gender}/{animation}'))
@@ -156,7 +164,17 @@ class Player(pygame.sprite.Sprite):
                     temp_list.append(img)
                 self.animation_list.append(temp_list)
         if char_type == 'enemy':
-            animation_types = ['walking', 'walking', 'walking']
+            animation_types = ['walking', 'walking', 'walking', 'walking', 'walking', 'walking']
+            for animation in animation_types:
+                temp_list = []
+                num_of_frames = len(os.listdir(f'assets/img/{self.char_type}/{gender}/{animation}'))
+                for i in range(num_of_frames):
+                    img = pygame.image.load(f'assets/img/{self.char_type}/{gender}/{animation}/{i}.png').convert_alpha()
+                    img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+                    temp_list.append(img)
+                self.animation_list.append(temp_list)
+        if char_type == 'professor':
+            animation_types = ['idle', 'idle', 'idle', 'idle', 'idle', 'idle']
             for animation in animation_types:
                 temp_list = []
                 num_of_frames = len(os.listdir(f'assets/img/{self.char_type}/{gender}/{animation}'))
@@ -243,6 +261,10 @@ class Player(pygame.sprite.Sprite):
                         self.flip = False
                         self.direction = -1
 
+        if self.alive:
+            if pygame.sprite.spritecollide(self, professor_group, False):
+                self.alive = False
+
         if pygame.sprite.spritecollide(self, water_group, False):
             self.health = 0
 
@@ -318,7 +340,7 @@ class Player(pygame.sprite.Sprite):
             self.health = 0
             self.speed = 0
             self.alive = False
-            self.update_action(2)
+            self.update_action(5)
 
     def draw(self):
         screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
@@ -347,7 +369,7 @@ class World():
                         decoration_1 = Decoration(img, x * TILE_SIZE, y * TILE_SIZE)
                         decoration_group.add(decoration_1)
                     elif tile == 12:
-                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
+                        player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.11, 3)
                         health_bar = HealthBar(10, 10, player.health, player.health)
                     elif tile == 13:
                         enemy_1 = Player('enemy', 'mosquito', x * TILE_SIZE, y * TILE_SIZE, 0.09, 2)
@@ -360,6 +382,12 @@ class World():
                         exit_group.add(exit)
                     elif tile >= 16 and tile <= 17:
                         self.obstacle_list.append(tile_data)
+                    elif tile == 18:
+                        professor_1 = Player('professor', 'boy', x * TILE_SIZE, y * TILE_SIZE, 0.11, 2)
+                        professor_group.add(professor_1)
+                    elif tile == 19:
+                        professor_2= Player('professor', 'girl', x * TILE_SIZE, y * TILE_SIZE, 0.11, 2)
+                        professor_group.add(professor_2)
 
         return player, health_bar
 
@@ -444,7 +472,7 @@ class ScreenFade():
         return fade_complete
 
 intro_fade = ScreenFade(1, BLACK, 10)
-death_fade = ScreenFade(3, BLACK, 50)
+death_fade = ScreenFade(3, BLACK, 20)
 
 play_button = button.Button(((screen.get_width() / 2) - (play_img.get_width() / 2) * 3), 290,
                             play_img, 3.0)
@@ -473,6 +501,7 @@ pause_button = button.Button(1205, 5, pause_img, 1.5)
 male_button = button.Button(100, ((screen.get_height() / 2) - (male_img.get_height() / 2) * 0.8), male_img, 0.8)
 female_button = button.Button(900, ((screen.get_height() / 2) - (male_img.get_height() / 2) * 0.8), female_img, 0.8)
 
+professor_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 decoration_group = pygame.sprite.Group()
 water_group = pygame.sprite.Group()
@@ -505,13 +534,14 @@ while True:
             title_button.status(screen)
 
             if play_button.draw(screen):
-                time.sleep(0.3)
                 playing = True
                 game_paused = False
                 menu_state = 'playing'
+                pygame.time.delay(200)
 
             if settings_button.draw(screen):
                 menu_state = "settings"
+                pygame.time.delay(200)
 
             if exit_button.draw(screen):
                 pygame.quit()
@@ -522,18 +552,20 @@ while True:
 
             if resume_button.draw(screen):
                 game_paused = False
+                pygame.time.delay(200)
 
             if settings_button.draw(screen):
                 menu_state = "settings"
+                pygame.time.delay(200)
 
             if quit_button.draw(screen):
                 level = 1
                 world_data = reset_level()
-                time.sleep(0.3)
                 game_paused = True
                 menu_state = "main"
                 playing = False
                 has_gender = False
+                pygame.time.delay(100)
 
         if menu_state == "settings":
 
@@ -547,35 +579,37 @@ while True:
                 if not muted:
                     muted = True
                     pygame.mixer_music.pause()
+                    pygame.time.delay(200)
 
                 elif muted:
                     muted = False
                     pygame.mixer_music.unpause()
+                    pygame.time.delay(200)
 
             if back_button.draw(screen):
                 if playing:
-                    time.sleep(0.3)
                     menu_state = 'playing'
+                    pygame.time.delay(200)
 
                 else:
-                    time.sleep(0.3)
                     menu_state = 'main'
+                    pygame.time.delay(200)
 
             if keys[pygame.K_ESCAPE]:
 
                 if playing and click == 0:
                     click = 1
-                    time.sleep(0.3)
                     menu_state = 'playing'
+                    pygame.time.delay(200)
 
                 elif playing and click == 1:
                     click = 0
-                    time.sleep(0.3)
                     game_paused = False
+                    pygame.time.delay(200)
 
                 else:
-                    time.sleep(0.3)
                     menu_state = 'main'
+                    pygame.time.delay(200)
 
     if not game_paused and playing:
         if not game_complete:
@@ -583,17 +617,20 @@ while True:
                 if male_button.draw(screen):
                     gender = 'boy'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.11, 3)
                 if female_button.draw(screen):
                     gender = 'girl'
                     has_gender = True
-                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.1, 5)
+                    player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.11, 3)
             if has_gender:
                 if game_status == "battle":
                     screen.blit(battle_field_imd, (0, 0))
 
                 else:
-                    screen.blit(bg_playing_img, (0, 0))
+                    if level == 1:
+                        screen.blit(bg_level_1_img, (0, 0))
+                    if level == 2:
+                        level_2()
                     world.draw()
                     health_bar.draw(player.health)
 
@@ -604,6 +641,11 @@ while True:
                         enemy.ai()
                         enemy.update()
                         enemy.draw()
+
+                    for professor in professor_group:
+                        professor.ai()
+                        professor.update()
+                        professor.draw()
 
                     decoration_group.update()
                     water_group.update()
@@ -618,8 +660,12 @@ while True:
                             intro_fade.fade_counter = 0
 
                     if player.alive:
-                        if player.in_air:
+                        if not player.can_move:
+                            player.update_action(4)
+                        elif player.in_air:
                             player.update_action(2)
+                        elif player.running:
+                            player.update_action(3)
                         elif moving_left or moving_right:
                             player.update_action(1)
                         else:
@@ -649,6 +695,7 @@ while True:
                                 start_intro = True
                                 bg_scroll = 0
                                 world_data = reset_level()
+                                player.update_action(5)
                                 with open(f'assets/level{level}_data.csv', newline='') as csvfile:
                                     reader = csv.reader(csvfile, delimiter=',')
                                     for x, row in enumerate(reader):
@@ -659,10 +706,11 @@ while True:
 
                 if pause_button.draw(screen):
                     game_paused = True
+                    pygame.time.delay(200)
 
                 if keys[pygame.K_ESCAPE]:
                     game_paused = True
-                    time.sleep(0.2)
+                    pygame.time.delay(200)
                 if level == 3:
                     draw_text(f'The Game will Stop in {time_remaining} seconds...', font, BLACK, ((SCREEN_WIDTH / 2) - 100), 20)
                     if time_remaining == 0:
@@ -723,11 +771,17 @@ while True:
                         if not muted and player.jump:
                             if jump_sound == 1:
                                 jump_fx.play()
+                if event.key == pygame.K_LSHIFT:
+                    player.speed = 5
+                    player.running = True
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 moving_left = False
             if event.key == pygame.K_d:
                 moving_right = False
+            if event.key == pygame.K_LSHIFT:
+                player.speed = 3
+                player.running = False
 
     pygame.display.update()

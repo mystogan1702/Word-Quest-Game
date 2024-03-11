@@ -20,7 +20,7 @@ pygame.display.set_caption('Level Editor')
 ROWS = 16
 MAX_COLS = 150
 TILE_SIZE = SCREEN_HEIGHT // ROWS
-TILE_TYPES = 18
+TILE_TYPES = 20
 level = 0
 current_tile = 0
 scroll_left = False
@@ -42,7 +42,7 @@ for x in range(TILE_TYPES):
 
 save_img = pygame.image.load('assets/img/buttons/Save.png').convert_alpha()
 load_img = pygame.image.load('assets/img/buttons/Load.png').convert_alpha()
-background_img = pygame.image.load('assets/img/bg and cursor/Background_Playing.jpg').convert_alpha()
+background_img = pygame.image.load('assets/img/bg and cursor/bg_level_1.jpg').convert_alpha()
 
 
 GREEN = (144, 201, 120)
