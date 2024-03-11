@@ -7,6 +7,11 @@ pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
 
+save_cooldown = 0
+load_cooldown = 0
+cooldown_duration = 5
+loading_in_progress = False
+saving_in_progress = False
 
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
@@ -42,7 +47,7 @@ for x in range(TILE_TYPES):
 
 save_img = pygame.image.load('assets/img/buttons/Save.png').convert_alpha()
 load_img = pygame.image.load('assets/img/buttons/Load.png').convert_alpha()
-background_img = pygame.image.load('assets/img/bg and cursor/bg_level_1.jpg').convert_alpha()
+background_img = pygame.image.load('assets/img/bg and cursor/Battle_Field.png').convert_alpha()
 
 
 GREEN = (144, 201, 120)
@@ -118,23 +123,41 @@ while run:
 	draw_text('Press UP or DOWN to change level', font, WHITE, 10, SCREEN_HEIGHT + LOWER_MARGIN - 60)
 	draw_text('Right Click to Place or Left Click to Remove', font, WHITE, 10, SCREEN_HEIGHT + LOWER_MARGIN - 30)
 
-	if save_button.draw(screen):
-		save_text_show = True
+	if load_button.draw(screen) and not saving_in_progress:
+		if load_cooldown == 0:
+			load_text_show = True
+			loading_in_progress = True  # Set flag to indicate load action in progress
 
-		with open(f'assets/level{level}_data.csv', 'w', newline='') as csvfile:
-			writer = csv.writer(csvfile, delimiter = ',')
-			for row in world_data:
-				writer.writerow(row)
+			scroll = 0
+			with open(f'assets/level{level}_data.csv', newline='') as csvfile:
+				reader = csv.reader(csvfile, delimiter=',')
+				for x, row in enumerate(reader):
+					for y, tile in enumerate(row):
+						world_data[x][y] = int(tile)
 
-	if load_button.draw(screen):
-		load_text_show = True
+			load_cooldown = cooldown_duration * FPS
 
-		scroll = 0
-		with open(f'assets/level{level}_data.csv', newline='') as csvfile:
-			reader = csv.reader(csvfile, delimiter = ',')
-			for x, row in enumerate(reader):
-				for y, tile in enumerate(row):
-					world_data[x][y] = int(tile)
+	if save_button.draw(screen) and not loading_in_progress:
+		if save_cooldown == 0:
+			save_text_show = True
+			saving_in_progress = True  # Set flag to indicate save action in progress
+
+			with open(f'assets/level{level}_data.csv', 'w', newline='') as csvfile:
+				writer = csv.writer(csvfile, delimiter=',')
+				for row in world_data:
+					writer.writerow(row)
+
+			save_cooldown = cooldown_duration * FPS
+
+	if save_cooldown > 0:
+		save_cooldown -= 1
+	if load_cooldown > 0:
+		load_cooldown -= 1
+
+	if saving_in_progress and save_cooldown == 0:
+		saving_in_progress = False
+	if loading_in_progress and load_cooldown == 0:
+		loading_in_progress = False
 
 	pygame.draw.rect(screen, GREEN, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
 

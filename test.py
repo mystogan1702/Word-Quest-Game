@@ -159,6 +159,9 @@ class Player(pygame.sprite.Sprite):
         self.running = False
         self.professor_health = 100
         self.battle = False
+        self.damaged = False
+        self.battle_won = False
+        self.gender = ''
 
         if char_type == 'player':
             animation_types = ['idle', 'walking', 'jumping', 'running', 'damage', 'dead']
@@ -247,10 +250,11 @@ class Player(pygame.sprite.Sprite):
                     self.health -= 1
                     self.vulnerable = False
                     self.can_move = False
+                    self.damaged = True
                     if moving_left:
                         dx = 30
                         dy = -30
-                        self.flip = False
+                        self.flip = True
                         self.direction = 1
                     elif moving_right:
                         dx = -30
@@ -265,7 +269,7 @@ class Player(pygame.sprite.Sprite):
                     elif self.player_idling and player.direction == -1:
                         dx = 30
                         dy = -30
-                        self.flip = False
+                        self.flip = True
                         self.direction = -1
 
         if self.alive:
@@ -393,13 +397,15 @@ class World():
                     elif tile >= 16 and tile <= 17:
                         self.obstacle_list.append(tile_data)
                     elif tile == 18:
-                        professor = Player('professor', 'boy', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
-                        professor_health_bar = HealthBar(1000, 10, professor.professor_health, professor.professor_health)
-                        professor_group.add(professor)
+                        professor_girl = Player('professor', 'boy', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
+                        professor_health_bar = HealthBar(1100, 10, professor_girl.professor_health, professor_girl.professor_health)
+                        professor_group.add(professor_girl)
+                        professor_girl.gender = "boy"
                     elif tile == 19:
-                        professor = Player('professor', 'girl', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
-                        professor_health_bar = HealthBar(1000, 10, professor.professor_health, professor.professor_health)
-                        professor_group.add(professor)
+                        professor_boy = Player('professor', 'girl', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
+                        professor_health_bar = HealthBar(1100, 10, professor_boy.professor_health, professor_boy.professor_health)
+                        professor_group.add(professor_boy)
+                        professor_boy.gender = "girl"
 
         return player, health_bar, professor_health_bar
 
@@ -492,6 +498,7 @@ class WordGame:
         self.SHUFFLE_COOLDOWN_MS = 2000
         self.last_shuffle_time = 0
         self.clock = pygame.time.Clock()
+        self.animation_count = 0
 
         self.points_font = pygame.font.Font(None, self.FONT_SIZE)
 
@@ -508,8 +515,34 @@ class WordGame:
             'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10
         }
 
-        self.background = pygame.image.load('assets/img/bg and cursor/Background.png')
-        self.footer = pygame.image.load('assets/img/bg and cursor/Battle_Field.png')
+        self.background = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
+        self.footer = pygame.image.load('assets/img/bg and cursor/Battle_Field.png').convert_alpha()
+
+        self.male_1_character = pygame.image.load('assets/img/player/boy/idle/0.png')
+        self.male_2_character = pygame.image.load('assets/img/player/boy/idle/1.png')
+        self.female_character = pygame.image.load('assets/img/player/girl/idle/0.png')
+
+        self.male_professor = pygame.image.load('assets/img/professor/professor.png')
+        self.female_professor = pygame.image.load('assets/img/professor/girl/idle/0.png')
+
+        male_1_character_width = self.male_1_character.get_width()
+        male_1_character_height = self.male_1_character.get_height()
+        self.male_1_character = pygame.transform.scale(self.male_1_character, (int(male_1_character_width * 0.3), int(male_1_character_height * 0.3)))
+
+        female_character_width = self.female_character.get_width()
+        female_character_height = self.female_character.get_height()
+        self.female_character = pygame.transform.scale(self.female_character, (
+        int(female_character_width * 0.3), int(female_character_height * 0.3)))
+
+        male_professor_width = self.male_professor.get_width()
+        male_professor_height = self.male_professor.get_height()
+        self.male_professor = pygame.transform.scale(self.male_professor, (
+        int(male_professor_width * 0.3), int(male_professor_height * 0.3)))
+
+        female_professor_width = self.female_professor.get_width()
+        female_professor_height = self.female_professor.get_height()
+        self.female_professor = pygame.transform.scale(self.female_professor, (
+            int(female_professor_width * 0.3), int(female_professor_height * 0.3)))
 
         self.attack_img = pygame.image.load('assets/img/icons/attack.png').convert_alpha()
         self.pass_img = pygame.image.load('assets/img/icons/pass.png').convert_alpha()
@@ -573,10 +606,23 @@ class WordGame:
         return moved_letters
 
     def draw_game(self):
-        self.screen.blit(self.background, (0, 0))
-        self.screen.blit(self.footer, (0, 0))
+        screen.blit(self.background, (0, 0))
+        screen.blit(self.footer, (0, 0))
+
+        if gender == "boy":
+            screen.blit(self.male_1_character, (30, 90))
+        elif gender == "girl":
+            screen.blit(self.female_character, (30, 90))
+
+        if professor.char_type == "professor":
+            if professor.gender == 'boy':
+                screen.blit(self.male_professor, (1130, 90))
+            elif professor.gender == 'girl':
+                screen.blit(self.female_professor, (1130, 90))
+
         health_bar.draw(player.health)
         professor_health_bar.draw(professor.professor_health)
+
 
         for i, letter in enumerate(self.player_hand):
             pygame.draw.rect(self.screen, self.WHITE, (50 + i * 80, 560, 60, 60))  # Updated y-coordinate to 560
@@ -756,6 +802,7 @@ class WordGame:
                             professor.professor_health -= points
                     if professor.professor_health <= 0:
                         player.can_move = False
+                        player.battle_won = True
                         professor.kill()
                         player.battle = False
 
@@ -943,10 +990,13 @@ while True:
                     player.can_move = False
                     word_game = WordGame()
                     word_game.run_game()
-                    if not player.alive:
-                        player.battle = False
 
                 else:
+                    if player.battle_won:
+                        if death_fade.fade():
+                            death_fade.fade_counter = 0
+                            start_intro = True
+                        player.battle_won = False
                     player.can_move = True
                     if level == 1:
                         level_1()
@@ -981,8 +1031,9 @@ while True:
                             intro_fade.fade_counter = 0
 
                     if player.alive:
-                        if not player.can_move:
+                        if player.damaged:
                             player.update_action(4)
+                            player.can_move = False
                         elif player.in_air:
                             player.update_action(2)
                         elif player.running:
@@ -1070,6 +1121,7 @@ while True:
                 current_seconds -= 1
             if current_seconds == 2:
                 player.can_move = True
+                player.damaged = False
             if current_seconds == 0:
                 player.vulnerable = True
                 current_seconds = 3
