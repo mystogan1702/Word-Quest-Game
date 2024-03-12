@@ -1078,6 +1078,7 @@ while True:
                     exit_group.draw(screen)
 
                     if start_intro == True:
+                        player.can_move = False
                         if intro_fade.fade():
                             start_intro = False
                             intro_fade.fade_counter = 0
