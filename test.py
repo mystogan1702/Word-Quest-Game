@@ -46,15 +46,16 @@ current_seconds = 3
 time_remaining = 300
 game_complete = False
 pygame.time.set_timer(pygame.USEREVENT, 1000)
+music = 'main menu'
+music_play = 0
 
 moving_left = False
 moving_right = False
 
-pygame.mixer.music.load('assets/audio/music2.mp3')
-pygame.mixer.music.set_volume(0.3)
-pygame.mixer.music.play(-1, 0.0, 5000)
 jump_fx = pygame.mixer.Sound('assets/audio/jump.wav')
 jump_fx.set_volume(0.05)
+damage_fx = pygame.mixer.Sound('assets/audio/damage.wav')
+damage_fx.set_volume(0.2)
 
 surf = pygame.image.load('assets/img/cursor/Cursor.png').convert_alpha()
 width = surf.get_width()
@@ -251,6 +252,9 @@ class Player(pygame.sprite.Sprite):
                     self.vulnerable = False
                     self.can_move = False
                     self.damaged = True
+                    if not muted:
+                        if self.damaged:
+                            damage_fx.play()
                     if moving_left:
                         dx = 30
                         dy = -30
@@ -504,6 +508,10 @@ class WordGame:
 
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Word Game")
+
+        pygame.mixer.music.load('assets/audio/Battle_Music.wav')
+        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.play(-1, 0.0, 5000)
 
         self.letter_images = {letter: pygame.image.load(f'assets/img/letter tiles/{letter}.png') for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}
 
@@ -769,6 +777,8 @@ class WordGame:
             self.clock.tick(120)
 
             if not player.battle:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
                 break
 
     def handle_backspace(self):
@@ -882,7 +892,23 @@ with open(f'assets/level{level}_data.csv', newline='') as csvfile:
 world = World()
 player, health_bar, professor_health_bar = world.process_data(world_data)
 
+
 while True:
+    music_play += 1
+    if music == "main menu":
+        if music_play == 1:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load('assets/audio/awesomeness.wav')
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1, 0.0, 5000)
+
+    if music == "playing":
+        if music_play == 1:
+            pygame.mixer.music.load('assets/audio/TownTheme.mp3')
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1, 0.0, 5000)
+
     clock.tick(FPS)
 
     keys = pygame.key.get_pressed()
@@ -893,6 +919,7 @@ while True:
         screen.blit(bg_img, (0, 0))
 
     if game_paused:
+        music = 'main menu'
         if menu_state == "main":
             title_button.status(screen)
 
@@ -915,6 +942,10 @@ while True:
 
             if resume_button.draw(screen):
                 game_paused = False
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                music = "playing"
+                music_play = 0
                 pygame.time.delay(200)
 
             if settings_button.draw(screen):
@@ -928,6 +959,10 @@ while True:
                 menu_state = "main"
                 playing = False
                 has_gender = False
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                music = "main menu"
+                music_play = 0
                 pygame.time.delay(100)
 
         if menu_state == "settings":
@@ -987,12 +1022,16 @@ while True:
                     player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.11, 3)
             if has_gender:
                 if player.battle:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
                     player.can_move = False
                     word_game = WordGame()
                     word_game.run_game()
 
                 else:
                     if player.battle_won:
+                        music = "playing"
+                        music_play = 0
                         if death_fade.fade():
                             death_fade.fade_counter = 0
                             start_intro = True
@@ -1080,6 +1119,10 @@ while True:
 
                 if pause_button.draw(screen):
                     game_paused = True
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    music = "main menu"
+                    music_play = 0
                     pygame.time.delay(200)
 
                 if keys[pygame.K_ESCAPE]:

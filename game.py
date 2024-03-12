@@ -28,7 +28,7 @@ TILE_TYPES = 20
 MAX_LEVELS = 3
 screen_scroll = 0
 bg_scroll = 0
-level = 2
+level = 1
 start_game = False
 start_intro = False
 game_restart = False
@@ -46,15 +46,16 @@ current_seconds = 3
 time_remaining = 300
 game_complete = False
 pygame.time.set_timer(pygame.USEREVENT, 1000)
+music = 'main menu'
+music_play = 0
 
 moving_left = False
 moving_right = False
 
-pygame.mixer.music.load('assets/audio/music2.mp3')
-pygame.mixer.music.set_volume(0.3)
-pygame.mixer.music.play(-1, 0.0, 5000)
 jump_fx = pygame.mixer.Sound('assets/audio/jump.wav')
 jump_fx.set_volume(0.05)
+damage_fx = pygame.mixer.Sound('assets/audio/damage.wav')
+damage_fx.set_volume(0.2)
 
 surf = pygame.image.load('assets/img/cursor/Cursor.png').convert_alpha()
 width = surf.get_width()
@@ -76,6 +77,7 @@ exit_img = pygame.image.load('assets/img/buttons/Exit.png').convert_alpha()
 bg_img = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
 bg_level_1_img = pygame.image.load('assets/img/bg and cursor/bg_level_1.jpg').convert_alpha()
 bg_level_2_img = pygame.image.load('assets/img/bg and cursor/bg_level_2.png').convert_alpha()
+bg_grass = pygame.image.load('assets/img/bg and cursor/grass_bg.jpg').convert_alpha()
 bg_paused_img = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
 battle_field_imd = pygame.image.load('assets/img/bg and cursor/Battle_Field.png').convert_alpha()
 audio_off_img = pygame.image.load('assets/img/buttons/button_slider_animation/button_17.png').convert_alpha()
@@ -108,12 +110,17 @@ def level_2():
     screen.fill(BG)
     screen.blit(bg_level_2_img, (0 - bg_scroll * 0.6, 0))
 
+def level_1():
+    screen.fill(BLACK)
+    screen.blit(bg_level_1_img, (0 - bg_scroll * 0.6, 0))
+
 
 def reset_level():
     enemy_group.empty()
     decoration_group.empty()
     water_group.empty()
     exit_group.empty()
+    professor_group.empty()
 
     # create empty tile list
     data = []
@@ -131,7 +138,7 @@ class Player(pygame.sprite.Sprite):
         self.char_type = char_type
         self.speed = speed
         self.shoot_cooldown = 0
-        self.health = 20
+        self.health = 30
         self.max_health = self.health
         self.direction = 1
         self.vel_y = 0
@@ -151,7 +158,11 @@ class Player(pygame.sprite.Sprite):
         self.counter = current_seconds
         self.can_move = True
         self.running = False
-        self.professor_health = 50
+        self.professor_health = 100
+        self.battle = False
+        self.damaged = False
+        self.battle_won = False
+        self.gender = ''
 
         if char_type == 'player':
             animation_types = ['idle', 'walking', 'jumping', 'running', 'damage', 'dead']
@@ -237,13 +248,17 @@ class Player(pygame.sprite.Sprite):
         if self.vulnerable:
             if self.char_type == 'player':
                 if pygame.sprite.spritecollide(self, enemy_group, False):
-                    self.health -= 5
+                    self.health -= 1
                     self.vulnerable = False
                     self.can_move = False
+                    self.damaged = True
+                    if not muted:
+                        if self.damaged:
+                            damage_fx.play()
                     if moving_left:
                         dx = 30
                         dy = -30
-                        self.flip = False
+                        self.flip = True
                         self.direction = 1
                     elif moving_right:
                         dx = -30
@@ -258,12 +273,15 @@ class Player(pygame.sprite.Sprite):
                     elif self.player_idling and player.direction == -1:
                         dx = 30
                         dy = -30
-                        self.flip = False
+                        self.flip = True
                         self.direction = -1
 
         if self.alive:
-            if pygame.sprite.spritecollide(self, professor_group, False):
-                self.alive = False
+            for professor in professor_group:
+                if pygame.sprite.spritecollide(player, professor_group, False):
+                    if professor.alive:
+                        pygame.time.delay(100)
+                        self.battle = True
 
         if pygame.sprite.spritecollide(self, water_group, False):
             self.health = 0
@@ -383,13 +401,17 @@ class World():
                     elif tile >= 16 and tile <= 17:
                         self.obstacle_list.append(tile_data)
                     elif tile == 18:
-                        professor_1 = Player('professor', 'boy', x * TILE_SIZE, y * TILE_SIZE, 0.11, 2)
-                        professor_group.add(professor_1)
+                        professor_girl = Player('professor', 'boy', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
+                        professor_health_bar = HealthBar(1100, 10, professor_girl.professor_health, professor_girl.professor_health)
+                        professor_group.add(professor_girl)
+                        professor_girl.gender = "boy"
                     elif tile == 19:
-                        professor_2= Player('professor', 'girl', x * TILE_SIZE, y * TILE_SIZE, 0.11, 2)
-                        professor_group.add(professor_2)
+                        professor_boy = Player('professor', 'girl', x * TILE_SIZE, y * TILE_SIZE, 0.11, 0)
+                        professor_health_bar = HealthBar(1100, 10, professor_boy.professor_health, professor_boy.professor_health)
+                        professor_group.add(professor_boy)
+                        professor_boy.gender = "girl"
 
-        return player, health_bar
+        return player, health_bar, professor_health_bar
 
     def draw(self):
         for tile in self.obstacle_list:
@@ -470,6 +492,357 @@ class ScreenFade():
             fade_complete = True
 
         return fade_complete
+class WordGame:
+    def __init__(self):
+        pygame.init()
+        self.WIDTH, self.HEIGHT = 1280, 720
+        self.WHITE = (255, 255, 255)
+        self.FONT_SIZE = 30
+        self.SCALE_FACTOR = 0.25
+        self.SHUFFLE_COOLDOWN_MS = 2000
+        self.last_shuffle_time = 0
+        self.clock = pygame.time.Clock()
+        self.animation_count = 0
+
+        self.points_font = pygame.font.Font(None, self.FONT_SIZE)
+
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        pygame.display.set_caption("Word Game")
+
+        pygame.mixer.music.load('assets/audio/Battle_Music.wav')
+        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.play(-1, 0.0, 5000)
+
+        self.letter_images = {letter: pygame.image.load(f'assets/img/letter tiles/{letter}.png') for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}
+
+        self.word_list = self.load_words('assets/word list 1.txt')
+
+        self.letter_values = {
+            'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1, 'J': 8,
+            'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1, 'S': 1, 'T': 1,
+            'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10
+        }
+
+        self.background = pygame.image.load('assets/img/bg and cursor/Background.png').convert_alpha()
+        self.footer = pygame.image.load('assets/img/bg and cursor/Battle_Field.png').convert_alpha()
+
+        self.male_1_character = pygame.image.load('assets/img/player/boy/idle/0.png')
+        self.male_2_character = pygame.image.load('assets/img/player/boy/idle/1.png')
+        self.female_character = pygame.image.load('assets/img/player/girl/idle/0.png')
+
+        self.male_professor = pygame.image.load('assets/img/professor/professor.png')
+        self.female_professor = pygame.image.load('assets/img/professor/girl/idle/0.png')
+
+        male_1_character_width = self.male_1_character.get_width()
+        male_1_character_height = self.male_1_character.get_height()
+        self.male_1_character = pygame.transform.scale(self.male_1_character, (int(male_1_character_width * 0.3), int(male_1_character_height * 0.3)))
+
+        female_character_width = self.female_character.get_width()
+        female_character_height = self.female_character.get_height()
+        self.female_character = pygame.transform.scale(self.female_character, (
+        int(female_character_width * 0.3), int(female_character_height * 0.3)))
+
+        male_professor_width = self.male_professor.get_width()
+        male_professor_height = self.male_professor.get_height()
+        self.male_professor = pygame.transform.scale(self.male_professor, (
+        int(male_professor_width * 0.3), int(male_professor_height * 0.3)))
+
+        female_professor_width = self.female_professor.get_width()
+        female_professor_height = self.female_professor.get_height()
+        self.female_professor = pygame.transform.scale(self.female_professor, (
+            int(female_professor_width * 0.3), int(female_professor_height * 0.3)))
+
+        self.attack_img = pygame.image.load('assets/img/icons/attack.png').convert_alpha()
+        self.pass_img = pygame.image.load('assets/img/icons/pass.png').convert_alpha()
+        self.shuffle_img = pygame.image.load('assets/img/icons/shuffle.png').convert_alpha()
+
+        self.attack_button = button.Button(1150, 360, self.attack_img, 1.5)
+        self.pass_button = button.Button(1150, 490, self.pass_img, 1.5)
+        self.shuffle_button = button.Button(1150, 610, self.shuffle_img, 1.5)
+
+        self.player_hand = []
+        self.answer_box = []
+
+        self.player_hand = self.update_player_hand()
+
+    def load_words(self, filename):
+        with open(filename, 'r') as file:
+            return [word.strip().upper() for word in file.readlines()]
+
+    def shuffle_hand(self, player_hand):
+        animation_frames = 20
+        original_hand = player_hand.copy()
+
+        for frame in range(animation_frames):
+            player_hand.clear()
+            player_hand.extend(random.sample(original_hand, len(original_hand)))
+
+            self.draw_game()
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        return player_hand
+
+    def update_player_hand(self):
+        chosen_word = random.choice(self.word_list)
+        chosen_word_letters = list(chosen_word)
+
+        valid_words = [word for word in self.word_list if 3 <= len(word) <= 5]
+        chosen_word = random.choice(valid_words)
+        chosen_word_letters = list(chosen_word)
+
+        needed_letters = max(10 - len(chosen_word_letters), 0)
+        new_set_letters = chosen_word_letters + random.sample(list(self.letter_images.keys()), needed_letters)
+
+        return self.shuffle_hand(new_set_letters[:10])
+
+    def calculate_points(self, word):
+        points = 0
+        for letter in word:
+            points += self.letter_values.get(letter, 0)
+        return points
+
+    def move_letters(self, target, source, speed=5):
+        moved_letters = []
+        for letter in source:
+            letter_rect = self.letter_images[letter[0]].get_rect()
+            while letter_rect.y < target[1]:
+                self.draw_game()
+                pygame.time.delay(10)
+                letter_rect.y += speed
+            moved_letters.append(source.pop(source.index(letter)))
+        return moved_letters
+
+    def draw_game(self):
+        screen.blit(self.background, (0, 0))
+        screen.blit(self.footer, (0, 0))
+
+        if gender == "boy":
+            screen.blit(self.male_1_character, (30, 90))
+        elif gender == "girl":
+            screen.blit(self.female_character, (30, 90))
+
+        if professor.char_type == "professor":
+            if professor.gender == 'boy':
+                screen.blit(self.male_professor, (1130, 90))
+            elif professor.gender == 'girl':
+                screen.blit(self.female_professor, (1130, 90))
+
+        health_bar.draw(player.health)
+        professor_health_bar.draw(professor.professor_health)
+
+
+        for i, letter in enumerate(self.player_hand):
+            pygame.draw.rect(self.screen, self.WHITE, (50 + i * 80, 560, 60, 60))  # Updated y-coordinate to 560
+            scaled_image = pygame.transform.scale(self.letter_images[letter],
+                                                  (int(256 * self.SCALE_FACTOR), int(256 * self.SCALE_FACTOR)))
+            self.screen.blit(scaled_image, (50 + i * 80, 557))
+
+            # Draw transparent answer box
+        answer_box_rect = pygame.Rect(50, 370, 600, 60)  # Updated y-coordinate to 370
+        pygame.draw.rect(self.screen, (70, 70, 70, 255), answer_box_rect)  # 128 for 50% transparency
+        for i, letter in enumerate(self.answer_box):
+            scaled_image = pygame.transform.scale(self.letter_images[letter],
+                                                  (int(256 * self.SCALE_FACTOR), int(256 * self.SCALE_FACTOR)))
+            self.screen.blit(scaled_image, (50 + i * 80, 370))
+
+        self.attack_button.draw(screen)
+        self.pass_button.draw(screen)
+        self.shuffle_button.draw(screen)
+
+
+    def pass_turn(self):
+        player.health -= 1
+        self.answer_box = []
+        # Update the player's hand and shuffle again
+        self.player_hand = self.update_player_hand()
+        self.player_hand = self.shuffle_hand(self.player_hand)
+
+    def draw_text(self, text, font, color, x, y):
+        text_obj = font.render(text, True, color)
+        rect = text_obj.get_rect()
+        rect.topleft = (x, y)
+        self.screen.blit(text_obj, rect)
+
+    def run_game(self):
+        running = True
+        pass_cooldown = 0
+        backspace_cooldown = 0
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = event.pos
+                    for i, letter in enumerate(self.player_hand):
+                        if 50 + i * 80 <= x <= 50 + i * 80 + 60 and 560 <= y <= 620:  # Updated y-coordinate to 560
+                            self.answer_box.append(self.player_hand.pop(i))
+                            break
+
+                        # Check if a letter in the answer box was clicked
+                    for i, letter in enumerate(self.answer_box):
+                        if 50 + i * 80 <= x <= 50 + i * 80 + 60 and 370 <= y <= 430:  # Updated y-coordinate to 370
+                            self.player_hand.append(self.answer_box.pop(i))
+                            break
+                    if self.attack_button.draw(screen):
+                        self.attack_action()
+                    elif self.shuffle_button.draw(screen):
+                        current_time = pygame.time.get_ticks()
+                        if current_time - self.last_shuffle_time >= self.SHUFFLE_COOLDOWN_MS:
+                            self.player_hand = self.shuffle_hand(self.player_hand)
+                            self.last_shuffle_time = current_time
+                    elif self.pass_button.draw(screen):
+                        current_time = pygame.time.get_ticks()
+                        if current_time - pass_cooldown >= self.SHUFFLE_COOLDOWN_MS:
+                            self.pass_turn()
+                            pass_cooldown = current_time
+
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_a:
+                        self.handle_letter_click('A')
+                    elif event.key == pygame.K_b:
+                        self.handle_letter_click('B')
+                    elif event.key == pygame.K_c:
+                        self.handle_letter_click('C')
+                    elif event.key == pygame.K_d:
+                        self.handle_letter_click('D')
+                    elif event.key == pygame.K_e:
+                        self.handle_letter_click('E')
+                    elif event.key == pygame.K_f:
+                        self.handle_letter_click('F')
+                    elif event.key == pygame.K_g:
+                        self.handle_letter_click('G')
+                    elif event.key == pygame.K_h:
+                        self.handle_letter_click('H')
+                    elif event.key == pygame.K_i:
+                        self.handle_letter_click('I')
+                    elif event.key == pygame.K_j:
+                        self.handle_letter_click('J')
+                    elif event.key == pygame.K_k:
+                        self.handle_letter_click('K')
+                    elif event.key == pygame.K_l:
+                        self.handle_letter_click('L')
+                    elif event.key == pygame.K_m:
+                        self.handle_letter_click('M')
+                    elif event.key == pygame.K_n:
+                        self.handle_letter_click('N')
+                    elif event.key == pygame.K_o:
+                        self.handle_letter_click('O')
+                    elif event.key == pygame.K_p:
+                        self.handle_letter_click('P')
+                    elif event.key == pygame.K_q:
+                        self.handle_letter_click('Q')
+                    elif event.key == pygame.K_r:
+                        self.handle_letter_click('R')
+                    elif event.key == pygame.K_s:
+                        self.handle_letter_click('S')
+                    elif event.key == pygame.K_t:
+                        self.handle_letter_click('T')
+                    elif event.key == pygame.K_u:
+                        self.handle_letter_click('U')
+                    elif event.key == pygame.K_v:
+                        self.handle_letter_click('V')
+                    elif event.key == pygame.K_w:
+                        self.handle_letter_click('W')
+                    elif event.key == pygame.K_x:
+                        self.handle_letter_click('X')
+                    elif event.key == pygame.K_y:
+                        self.handle_letter_click('Y')
+                    elif event.key == pygame.K_z:
+                        self.handle_letter_click('Z')
+                    elif event.key == pygame.K_RETURN:  # Handle Enter key
+                        self.attack_action()
+                    elif event.key == pygame.K_BACKSPACE:  # Handle Backspace key
+                        current_time = pygame.time.get_ticks()
+                        if current_time - backspace_cooldown >= 500:  # Cooldown of 500 milliseconds
+                            self.handle_backspace()
+
+            self.draw_game()
+
+            points_text = self.points_font.render(f'Points: {self.calculate_points("".join(self.answer_box))}', True, (255, 255, 255))
+            self.screen.blit(points_text, (900, 380))
+
+            if len("".join(self.answer_box)) == 4:
+                bonus_text = self.points_font.render('+1', True, (255, 255, 255))
+                self.screen.blit(bonus_text, (1000, 380))
+            if len("".join(self.answer_box)) == 5:
+                bonus_text = self.points_font.render('+2', True, (255, 255, 255))
+                self.screen.blit(bonus_text, (1000, 380))
+            if len("".join(self.answer_box)) == 6:
+                bonus_text = self.points_font.render('+3', True, (255, 255, 255))
+                self.screen.blit(bonus_text, (1000, 380))
+
+            pygame.display.flip()
+            self.clock.tick(120)
+
+            if not player.battle:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                break
+
+    def handle_backspace(self):
+        if self.answer_box:
+            letter_to_return = self.answer_box.pop()
+            self.player_hand.append(letter_to_return)
+
+    def attack_action(self):
+        submitted_word = ''.join(self.answer_box)
+        print(f"Submitted word: {submitted_word}")
+        if submitted_word in self.word_list or submitted_word == ''.join(self.player_hand):
+            points = self.calculate_points(submitted_word)
+            if len(submitted_word) == 4:
+                points += 1
+                bonus_text = '+1'
+            elif len(submitted_word) == 5:
+                points += 2
+                bonus_text = '+2'
+            elif len(submitted_word) == 6:
+                points += 3
+                bonus_text = '+3'
+            else:
+                bonus_text = ''
+            print(f"Valid word! Points: {points}")
+            player.health -= 1
+
+            if player.alive:
+                for professor in professor_group:
+                    if pygame.sprite.spritecollide(player, professor_group, False):
+                        if professor.alive:
+                            professor.professor_health -= points
+                    if professor.professor_health <= 0:
+                        player.can_move = False
+                        player.battle_won = True
+                        professor.kill()
+                        player.battle = False
+
+            if player.health <= 0:
+                player.alive = False
+                player.can_move = False
+                player.battle = False
+            if player.battle:
+                self.player_hand = self.update_player_hand()
+                self.answer_box = []
+                self.player_hand = self.shuffle_hand(self.player_hand)
+
+                points_text = self.points_font.render(f'Points: {points}', True, (255, 255, 255))
+                self.screen.blit(points_text, (900, 380))
+
+                if bonus_text:
+                    bonus_text_rendered = self.points_font.render(bonus_text, True, (255, 255, 255))
+                    self.screen.blit(bonus_text_rendered, (1000, 380))
+        else:
+            print("Invalid word. Letters will go back to player's hand.")
+            self.player_hand.extend(self.answer_box)
+            self.answer_box = []
+
+    def handle_letter_click(self, letter):
+        for i, letter_in_hand in enumerate(self.player_hand):
+            if letter_in_hand == letter:
+                self.answer_box.append(self.player_hand.pop(i))
+                break
+
+
 
 intro_fade = ScreenFade(1, BLACK, 10)
 death_fade = ScreenFade(3, BLACK, 20)
@@ -517,9 +890,25 @@ with open(f'assets/level{level}_data.csv', newline='') as csvfile:
         for y, tile in enumerate(row):
             world_data[x][y] = int(tile)
 world = World()
-player, health_bar = world.process_data(world_data)
+player, health_bar, professor_health_bar = world.process_data(world_data)
+
 
 while True:
+    music_play += 1
+    if music == "main menu":
+        if music_play == 1:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load('assets/audio/awesomeness.wav')
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1, 0.0, 5000)
+
+    if music == "playing":
+        if music_play == 1:
+            pygame.mixer.music.load('assets/audio/TownTheme.mp3')
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1, 0.0, 5000)
+
     clock.tick(FPS)
 
     keys = pygame.key.get_pressed()
@@ -530,6 +919,7 @@ while True:
         screen.blit(bg_img, (0, 0))
 
     if game_paused:
+        music = 'main menu'
         if menu_state == "main":
             title_button.status(screen)
 
@@ -552,6 +942,10 @@ while True:
 
             if resume_button.draw(screen):
                 game_paused = False
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                music = "playing"
+                music_play = 0
                 pygame.time.delay(200)
 
             if settings_button.draw(screen):
@@ -565,6 +959,10 @@ while True:
                 menu_state = "main"
                 playing = False
                 has_gender = False
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                music = "main menu"
+                music_play = 0
                 pygame.time.delay(100)
 
         if menu_state == "settings":
@@ -623,12 +1021,24 @@ while True:
                     has_gender = True
                     player = Player('player', gender, x * TILE_SIZE, y * TILE_SIZE, 0.11, 3)
             if has_gender:
-                if game_status == "battle":
-                    screen.blit(battle_field_imd, (0, 0))
+                if player.battle:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    player.can_move = False
+                    word_game = WordGame()
+                    word_game.run_game()
 
                 else:
+                    if player.battle_won:
+                        music = "playing"
+                        music_play = 0
+                        if death_fade.fade():
+                            death_fade.fade_counter = 0
+                            start_intro = True
+                        player.battle_won = False
+                    player.can_move = True
                     if level == 1:
-                        screen.blit(bg_level_1_img, (0, 0))
+                        level_1()
                     if level == 2:
                         level_2()
                     world.draw()
@@ -637,15 +1047,15 @@ while True:
                     player.update()
                     player.draw()
 
-                    for enemy in enemy_group:
-                        enemy.ai()
-                        enemy.update()
-                        enemy.draw()
-
                     for professor in professor_group:
                         professor.ai()
                         professor.update()
                         professor.draw()
+
+                    for enemy in enemy_group:
+                        enemy.ai()
+                        enemy.update()
+                        enemy.draw()
 
                     decoration_group.update()
                     water_group.update()
@@ -660,8 +1070,9 @@ while True:
                             intro_fade.fade_counter = 0
 
                     if player.alive:
-                        if not player.can_move:
+                        if player.damaged:
                             player.update_action(4)
+                            player.can_move = False
                         elif player.in_air:
                             player.update_action(2)
                         elif player.running:
@@ -677,6 +1088,8 @@ while True:
                             start_intro = True
                             level += 1
                             bg_scroll = 0
+                            moving_left = False
+                            moving_right = False
                             world_data = reset_level()
                             if level <= MAX_LEVELS:
                                 with open(f'assets/level{level}_data.csv', newline='') as csvfile:
@@ -685,7 +1098,7 @@ while True:
                                         for y, tile in enumerate(row):
                                             world_data[x][y] = int(tile)
                                 world = World()
-                                player, health_bar = world.process_data(world_data)
+                                player, health_bar, professor_health_bar = world.process_data(world_data)
 
                     else:
                         screen_scroll = 0
@@ -702,10 +1115,14 @@ while True:
                                         for y, tile in enumerate(row):
                                             world_data[x][y] = int(tile)
                                 world = World()
-                                player, health_bar = world.process_data(world_data)
+                                player, health_bar, professor_health_bar = world.process_data(world_data)
 
                 if pause_button.draw(screen):
                     game_paused = True
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    music = "main menu"
+                    music_play = 0
                     pygame.time.delay(200)
 
                 if keys[pygame.K_ESCAPE]:
@@ -747,6 +1164,7 @@ while True:
                 current_seconds -= 1
             if current_seconds == 2:
                 player.can_move = True
+                player.damaged = False
             if current_seconds == 0:
                 player.vulnerable = True
                 current_seconds = 3
