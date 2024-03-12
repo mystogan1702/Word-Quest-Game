@@ -509,6 +509,8 @@ class WordGame:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Word Game")
 
+        self.click_sound = pygame.mixer.Sound('assets/audio/click.wav')
+
         pygame.mixer.music.load('assets/audio/Battle_Music.wav')
         pygame.mixer.music.set_volume(0.1)
         pygame.mixer.music.play(-1, 0.0, 5000)
@@ -668,6 +670,7 @@ class WordGame:
         running = True
         pass_cooldown = 0
         backspace_cooldown = 0
+        attack_cooldown = 0
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -678,23 +681,31 @@ class WordGame:
                     for i, letter in enumerate(self.player_hand):
                         if 50 + i * 80 <= x <= 50 + i * 80 + 60 and 560 <= y <= 620:  # Updated y-coordinate to 560
                             self.answer_box.append(self.player_hand.pop(i))
+                            self.click_sound.play()
                             break
 
                         # Check if a letter in the answer box was clicked
                     for i, letter in enumerate(self.answer_box):
                         if 50 + i * 80 <= x <= 50 + i * 80 + 60 and 370 <= y <= 430:  # Updated y-coordinate to 370
                             self.player_hand.append(self.answer_box.pop(i))
+                            self.click_sound.play()
                             break
                     if self.attack_button.draw(screen):
-                        self.attack_action()
+                        current_time = pygame.time.get_ticks()
+                        if current_time - attack_cooldown >= self.SHUFFLE_COOLDOWN_MS:
+                            self.click_sound.play()
+                            self.attack_action()
+                            attack_cooldown = current_time
                     elif self.shuffle_button.draw(screen):
                         current_time = pygame.time.get_ticks()
                         if current_time - self.last_shuffle_time >= self.SHUFFLE_COOLDOWN_MS:
+                            self.click_sound.play()
                             self.player_hand = self.shuffle_hand(self.player_hand)
                             self.last_shuffle_time = current_time
                     elif self.pass_button.draw(screen):
                         current_time = pygame.time.get_ticks()
                         if current_time - pass_cooldown >= self.SHUFFLE_COOLDOWN_MS:
+                            self.click_sound.play()
                             self.pass_turn()
                             pass_cooldown = current_time
 
@@ -783,6 +794,7 @@ class WordGame:
 
     def handle_backspace(self):
         if self.answer_box:
+            self.click_sound.play()
             letter_to_return = self.answer_box.pop()
             self.player_hand.append(letter_to_return)
 
@@ -840,6 +852,7 @@ class WordGame:
         for i, letter_in_hand in enumerate(self.player_hand):
             if letter_in_hand == letter:
                 self.answer_box.append(self.player_hand.pop(i))
+                self.click_sound.play()  # Play the click sound
                 break
 
 
